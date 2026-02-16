@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radiance - Chemical Reaction Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .logo {
+            font-size: 3.5em;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 1.2em;
+            opacity: 0.95;
+            letter-spacing: 1px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-left: 4px solid #ff6b6b;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .instructions strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            color: #d63031;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .element-input-group {
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .suggestions.show {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .suggestion-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .suggestion-symbol {
+            font-weight: 700;
+            color: #667eea;
+            margin-right: 10px;
+        }
+
+        .suggestion-item:hover .suggestion-symbol {
+            color: white;
+        }
+
+        .plus-icon {
+            font-size: 3em;
+            color: #667eea;
+            font-weight: 700;
+            align-self: center;
+            text-align: center;
+        }
+
+        .selected-element {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-weight: 600;
+            color: #006633;
+            display: none;
+        }
+
+        .selected-element.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            width: 100%;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+            width: 100%;
+        }
+
+        .btn-pdf:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .reaction-display {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .reaction-equation {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #d63031;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .reaction-type {
+            background: white;
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 10px;
+        }
+
+        .reaction-details {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .detail-content {
+            font-size: 1.05em;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .products-list {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .product-item {
+            background: white;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        /* Scrollbar styling */
+        .suggestions::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .suggestions::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .suggestions::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .suggestions::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">RADIANCE</div>
+            <div class="tagline">Chemical Reaction Generator</div>
+        </div>
+
+        <div class="card">
+            <div class="instructions">
+                <strong>🧪 How to use:</strong>
+                Type element names (English or Symbol) and select from suggestions. Then click "Generate Reaction" to see the chemical reaction and products!
+            </div>
+
+            <div class="input-section">
+                <div class="element-input-group">
+                    <label>First Element/Compound:</label>
+                    <input type="text" class="search-input" id="element1Input" placeholder="e.g., Sodium or Na" autocomplete="off">
+                    <div class="suggestions" id="suggestions1"></div>
+                    <div class="selected-element" id="selected1"></div>
+                </div>
+
+                <div class="plus-icon">+</div>
+
+                <div class="element-input-group">
+                    <label>Second Element/Compound:</label>
+                    <input type="text" class="search-input" id="element2Input" placeholder="e.g., Chlorine or Cl" autocomplete="off">
+                    <div class="suggestions" id="suggestions2"></div>
+                    <div class="selected-element" id="selected2"></div>
+                </div>
+            </div>
+
+            <div class="button-container">
+                <button class="btn btn-generate" id="generateBtn" onclick="generateReaction()" disabled>Generate Reaction</button>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="reaction-display">
+                    <div class="reaction-equation" id="reactionEquation"></div>
+                    <div class="reaction-type" id="reactionType"></div>
+                </div>
+
+                <div class="reaction-details">
+                    <div class="detail-title">📋 Reaction Details</div>
+                    <div class="detail-content" id="reactionDescription"></div>
+                </div>
+
+                <div class="reaction-details">
+                    <div class="detail-title">🧬 Products Formed</div>
+                    <div class="products-list" id="productsList"></div>
+                </div>
+
+                <div class="reaction-details">
+                    <div class="detail-title">⚡ Reaction Conditions</div>
+                    <div class="detail-content" id="reactionConditions"></div>
+                </div>
+            </div>
+
+            <div class="button-container" id="pdfButton" style="display: none;">
+                <button class="btn btn-pdf" onclick="generatePDF()">📄 Download PDF Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Comprehensive database of elements and compounds
+        const chemicalDatabase = [
+            // Elements
+            { symbol: 'H', name: 'Hydrogen', type: 'element' },
+            { symbol: 'He', name: 'Helium', type: 'element' },
+            { symbol: 'Li', name: 'Lithium', type: 'element' },
+            { symbol: 'Be', name: 'Beryllium', type: 'element' },
+            { symbol: 'B', name: 'Boron', type: 'element' },
+            { symbol: 'C', name: 'Carbon', type: 'element' },
+            { symbol: 'N', name: 'Nitrogen', type: 'element' },
+            { symbol: 'O', name: 'Oxygen', type: 'element' },
+            { symbol: 'F', name: 'Fluorine', type: 'element' },
+            { symbol: 'Ne', name: 'Neon', type: 'element' },
+            { symbol: 'Na', name: 'Sodium', type: 'element' },
+            { symbol: 'Mg', name: 'Magnesium', type: 'element' },
+            { symbol: 'Al', name: 'Aluminium', type: 'element' },
+            { symbol: 'Si', name: 'Silicon', type: 'element' },
+            { symbol: 'P', name: 'Phosphorus', type: 'element' },
+            { symbol: 'S', name: 'Sulfur', type: 'element' },
+            { symbol: 'Cl', name: 'Chlorine', type: 'element' },
+            { symbol: 'Ar', name: 'Argon', type: 'element' },
+            { symbol: 'K', name: 'Potassium', type: 'element' },
+            { symbol: 'Ca', name: 'Calcium', type: 'element' },
+            { symbol: 'Fe', name: 'Iron', type: 'element' },
+            { symbol: 'Cu', name: 'Copper', type: 'element' },
+            { symbol: 'Zn', name: 'Zinc', type: 'element' },
+            { symbol: 'Ag', name: 'Silver', type: 'element' },
+            { symbol: 'Au', name: 'Gold', type: 'element' },
+            { symbol: 'Hg', name: 'Mercury', type: 'element' },
+            { symbol: 'Pb', name: 'Lead', type: 'element' },
+            { symbol: 'Br', name: 'Bromine', type: 'element' },
+            { symbol: 'I', name: 'Iodine', type: 'element' },
+            
+            // Common Compounds
+            { symbol: 'H₂O', name: 'Water', type: 'compound' },
+            { symbol: 'HCl', name: 'Hydrochloric Acid', type: 'compound' },
+            { symbol: 'H₂SO₄', name: 'Sulfuric Acid', type: 'compound' },
+            { symbol: 'HNO₃', name: 'Nitric Acid', type: 'compound' },
+            { symbol: 'NaOH', name: 'Sodium Hydroxide', type: 'compound' },
+            { symbol: 'KOH', name: 'Potassium Hydroxide', type: 'compound' },
+            { symbol: 'NH₃', name: 'Ammonia', type: 'compound' },
+            { symbol: 'CO₂', name: 'Carbon Dioxide', type: 'compound' },
+            { symbol: 'NaCl', name: 'Sodium Chloride', type: 'compound' },
+            { symbol: 'CaCO₃', name: 'Calcium Carbonate', type: 'compound' },
+            { symbol: 'CH₄', name: 'Methane', type: 'compound' },
+            { symbol: 'C₂H₅OH', name: 'Ethanol', type: 'compound' },
+            { symbol: 'O₂', name: 'Oxygen Gas', type: 'compound' },
+            { symbol: 'H₂', name: 'Hydrogen Gas', type: 'compound' },
+            { symbol: 'N₂', name: 'Nitrogen Gas', type: 'compound' },
+            { symbol: 'Cl₂', name: 'Chlorine Gas', type: 'compound' },
+        ];
+
+        let selectedElement1 = null;
+        let selectedElement2 = null;
+        let currentReaction = null;
+
+        // Setup autocomplete for both inputs
+        setupAutocomplete('element1Input', 'suggestions1', 1);
+        setupAutocomplete('element2Input', 'suggestions2', 2);
+
+        function setupAutocomplete(inputId, suggestionsId, elementNum) {
+            const input = document.getElementById(inputId);
+            const suggestionsDiv = document.getElementById(suggestionsId);
+
+            input.addEventListener('input', function() {
+                const value = this.value.toLowerCase().trim();
+                
+                if (value.length === 0) {
+                    suggestionsDiv.classList.remove('show');
+                    return;
+                }
+
+                const matches = chemicalDatabase.filter(item => 
+                    item.name.toLowerCase().includes(value) || 
+                    item.symbol.toLowerCase().includes(value)
+                );
+
+                if (matches.length === 0) {
+                    suggestionsDiv.classList.remove('show');
+                    return;
+                }
+
+                suggestionsDiv.innerHTML = '';
+                matches.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.innerHTML = `<span class="suggestion-symbol">${item.symbol}</span>${item.name}`;
+                    div.onclick = () => selectElement(item, elementNum, inputId, suggestionsId);
+                    suggestionsDiv.appendChild(div);
+                });
+
+                suggestionsDiv.classList.add('show');
+            });
+
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest(`#${inputId}`) && !e.target.closest(`#${suggestionsId}`)) {
+                    suggestionsDiv.classList.remove('show');
+                }
+            });
+        }
+
+        function selectElement(item, elementNum, inputId, suggestionsId) {
+            if (elementNum === 1) {
+                selectedElement1 = item;
+                document.getElementById('selected1').textContent = `Selected: ${item.symbol} (${item.name})`;
+                document.getElementById('selected1').classList.add('show');
+            } else {
+                selectedElement2 = item;
+                document.getElementById('selected2').textContent = `Selected: ${item.symbol} (${item.name})`;
+                document.getElementById('selected2').classList.add('show');
+            }
+
+            document.getElementById(inputId).value = '';
+            document.getElementById(suggestionsId).classList.remove('show');
+
+            // Enable generate button if both selected
+            if (selectedElement1 && selectedElement2) {
+                document.getElementById('generateBtn').disabled = false;
+            }
+        }
+
+        function generateReaction() {
+            if (!selectedElement1 || !selectedElement2) {
+                alert('Please select both elements/compounds!');
+                return;
+            }
+
+            const reaction = predictReaction(selectedElement1, selectedElement2);
+            currentReaction = reaction;
+
+            displayReaction(reaction);
+            document.getElementById('pdfButton').style.display = 'block';
+        }
+
+        function predictReaction(elem1, elem2) {
+            // Extensive reaction database
+            const reactions = {
+                'Na-Cl': {
+                    equation: '2Na + Cl₂ → 2NaCl',
+                    type: 'Synthesis/Combination Reaction',
+                    description: 'Sodium metal reacts vigorously with chlorine gas to form sodium chloride (table salt). This is a highly exothermic reaction that produces light and heat.',
+                    products: [
+                        { formula: 'NaCl', name: 'Sodium Chloride (Table Salt)', description: 'White crystalline solid, commonly used as table salt' }
+                    ],
+                    conditions: 'Room temperature, highly reactive. Safety precautions required due to violent nature of reaction.'
+                },
+                'H-O': {
+                    equation: '2H₂ + O₂ → 2H₂O',
+                    type: 'Synthesis/Combustion Reaction',
+                    description: 'Hydrogen gas combines with oxygen gas to form water. This is an extremely exothermic reaction and is used in rocket fuel.',
+                    products: [
+                        { formula: 'H₂O', name: 'Water', description: 'Clear, colorless liquid essential for life' }
+                    ],
+                    conditions: 'Requires ignition source (spark). Highly explosive mixture. Temperature: ~2000°C during combustion.'
+                },
+                'Na-H₂O': {
+                    equation: '2Na + 2H₂O → 2NaOH + H₂↑',
+                    type: 'Single Displacement Reaction',
+                    description: 'Sodium reacts violently with water to produce sodium hydroxide and hydrogen gas. The reaction is highly exothermic and can cause the hydrogen to ignite.',
+                    products: [
+                        { formula: 'NaOH', name: 'Sodium Hydroxide', description: 'Strong base, caustic solution' },
+                        { formula: 'H₂', name: 'Hydrogen Gas', description: 'Flammable gas released during reaction' }
+                    ],
+                    conditions: 'Room temperature, extremely violent reaction. Never perform without proper safety equipment.'
+                },
+                'HCl-NaOH': {
+                    equation: 'HCl + NaOH → NaCl + H₂O',
+                    type: 'Neutralization Reaction',
+                    description: 'Hydrochloric acid reacts with sodium hydroxide to form sodium chloride and water. This is a classic acid-base neutralization reaction.',
+                    products: [
+                        { formula: 'NaCl', name: 'Sodium Chloride', description: 'Common salt dissolved in water' },
+                        { formula: 'H₂O', name: 'Water', description: 'Neutral liquid product' }
+                    ],
+                    conditions: 'Room temperature. Exothermic reaction - solution becomes warm.'
+                },
+                'Fe-O': {
+                    equation: '4Fe + 3O₂ → 2Fe₂O₃',
+                    type: 'Oxidation/Rusting Reaction',
+                    description: 'Iron reacts with oxygen to form iron(III) oxide, commonly known as rust. This is a slow oxidation process in nature.',
+                    products: [
+                        { formula: 'Fe₂O₃', name: 'Iron(III) Oxide (Rust)', description: 'Reddish-brown flaky solid' }
+                    ],
+                    conditions: 'Occurs slowly at room temperature in presence of moisture. Can be accelerated with heat.'
+                },
+                'Ca-H₂O': {
+                    equation: 'Ca + 2H₂O → Ca(OH)₂ + H₂↑',
+                    type: 'Single Displacement Reaction',
+                    description: 'Calcium reacts with water to produce calcium hydroxide and hydrogen gas. Less violent than sodium-water reaction.',
+                    products: [
+                        { formula: 'Ca(OH)₂', name: 'Calcium Hydroxide', description: 'Slightly soluble base, used in construction' },
+                        { formula: 'H₂', name: 'Hydrogen Gas', description: 'Flammable gas released' }
+                    ],
+                    conditions: 'Room temperature, moderately vigorous reaction.'
+                },
+                'C-O': {
+                    equation: 'C + O₂ → CO₂',
+                    type: 'Combustion Reaction',
+                    description: 'Carbon burns in oxygen to produce carbon dioxide. This is a complete combustion reaction.',
+                    products: [
+                        { formula: 'CO₂', name: 'Carbon Dioxide', description: 'Colorless gas, greenhouse gas' }
+                    ],
+                    conditions: 'Requires high temperature to initiate. Exothermic reaction.'
+                },
+                'Mg-O': {
+                    equation: '2Mg + O₂ → 2MgO',
+                    type: 'Synthesis/Combustion Reaction',
+                    description: 'Magnesium burns in oxygen with an intense white flame to form magnesium oxide.',
+                    products: [
+                        { formula: 'MgO', name: 'Magnesium Oxide', description: 'White powder, used as antacid and refractory material' }
+                    ],
+                    conditions: 'High temperature (650°C+). Produces intense white light.'
+                },
+                'Zn-HCl': {
+                    equation: 'Zn + 2HCl → ZnCl₂ + H₂↑',
+                    type: 'Single Displacement Reaction',
+                    description: 'Zinc reacts with hydrochloric acid to produce zinc chloride and hydrogen gas.',
+                    products: [
+                        { formula: 'ZnCl₂', name: 'Zinc Chloride', description: 'Soluble white crystalline solid' },
+                        { formula: 'H₂', name: 'Hydrogen Gas', description: 'Flammable gas evolved' }
+                    ],
+                    conditions: 'Room temperature. Reaction rate increases with concentration and temperature.'
+                },
+                'CaCO₃-HCl': {
+                    equation: 'CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑',
+                    type: 'Double Displacement/Decomposition Reaction',
+                    description: 'Calcium carbonate reacts with hydrochloric acid to form calcium chloride, water, and carbon dioxide gas.',
+                    products: [
+                        { formula: 'CaCl₂', name: 'Calcium Chloride', description: 'Soluble salt used as de-icer' },
+                        { formula: 'H₂O', name: 'Water', description: 'Liquid product' },
+                        { formula: 'CO₂', name: 'Carbon Dioxide', description: 'Gas that causes effervescence' }
+                    ],
+                    conditions: 'Room temperature. Vigorous effervescence (bubbling).'
+                },
+                'CH₄-O': {
+                    equation: 'CH₄ + 2O₂ → CO₂ + 2H₂O',
+                    type: 'Combustion Reaction',
+                    description: 'Methane burns in oxygen to produce carbon dioxide and water. This is the basis of natural gas combustion.',
+                    products: [
+                        { formula: 'CO₂', name: 'Carbon Dioxide', description: 'Gaseous product' },
+                        { formula: 'H₂O', name: 'Water', description: 'Water vapor produced' }
+                    ],
+                    conditions: 'Requires ignition. Highly exothermic. Blue flame visible.'
+                },
+            };
+
+            // Create reaction key
+            const key1 = `${elem1.symbol}-${elem2.symbol}`;
+            const key2 = `${elem2.symbol}-${elem1.symbol}`;
+
+            if (reactions[key1]) {
+                return reactions[key1];
+            } else if (reactions[key2]) {
+                return reactions[key2];
+            } else {
+                // Generic reaction for unlisted combinations
+                return {
+                    equation: `${elem1.symbol} + ${elem2.symbol} → Products`,
+                    type: 'General Chemical Reaction',
+                    description: `${elem1.name} reacts with ${elem2.name}. The specific products depend on reaction conditions such as temperature, pressure, and the presence of catalysts.`,
+                    products: [
+                        { formula: 'Various', name: 'Reaction Products', description: 'Products vary based on specific conditions. Consult chemical literature for detailed information.' }
+                    ],
+                    conditions: 'Conditions vary. Professional consultation recommended for specific reaction details.'
+                };
+            }
+        }
+
+        function displayReaction(reaction) {
+            document.getElementById('reactionEquation').textContent = reaction.equation;
+            document.getElementById('reactionType').textContent = reaction.type;
+            document.getElementById('reactionDescription').textContent = reaction.description;
+            document.getElementById('reactionConditions').textContent = reaction.conditions;
+
+            const productsList = document.getElementById('productsList');
+            productsList.innerHTML = '';
+            reaction.products.forEach(product => {
+                const div = document.createElement('div');
+                div.className = 'product-item';
+                div.innerHTML = `<strong>${product.formula}</strong> - ${product.name}<br><small>${product.description}</small>`;
+                productsList.appendChild(div);
+            });
+
+            document.getElementById('resultSection').classList.add('show');
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(26);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(102, 126, 234);
+            doc.text('RADIANCE', 105, 20, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text('Chemical Reaction Generator', 105, 28, { align: 'center' });
+
+            // Line separator
+            doc.setDrawColor(102, 126, 234);
+            doc.setLineWidth(0.5);
+            doc.line(20, 32, 190, 32);
+
+            // Reactants
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Reactants:', 20, 45);
+
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            doc.text(`1. ${selectedElement1.symbol} - ${selectedElement1.name}`, 25, 53);
+            doc.text(`2. ${selectedElement2.symbol} - ${selectedElement2.name}`, 25, 60);
+
+            // Reaction Equation
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Chemical Equation:', 20, 73);
+
+            doc.setFontSize(13);
+            doc.setTextColor(214, 48, 49);
+            doc.setFont(undefined, 'bold');
+            doc.text(currentReaction.equation, 105, 83, { align: 'center' });
+
+            // Reaction Type
+            doc.setFontSize(11);
+            doc.setTextColor(102, 126, 234);
+            doc.text(`Type: ${currentReaction.type}`, 105, 92, { align: 'center' });
+
+            // Description
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text('Reaction Description:', 20, 105);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const descLines = doc.splitTextToSize(currentReaction.description, 170);
+            doc.text(descLines, 20, 113);
+
+            // Products
+            let yPos = 113 + (descLines.length * 6) + 8;
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Products Formed:', 20, yPos);
+
+            yPos += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            currentReaction.products.forEach((product, index) => {
+                doc.setFont(undefined, 'bold');
+                doc.text(`${index + 1}. ${product.formula} - ${product.name}`, 25, yPos);
+                yPos += 6;
+                doc.setFont(undefined, 'normal');
+                const prodLines = doc.splitTextToSize(product.description, 165);
+                doc.text(prodLines, 30, yPos);
+                yPos += (prodLines.length * 5) + 5;
+            });
+
+            // Conditions
+            yPos += 5;
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Reaction Conditions:', 20, yPos);
+
+            yPos += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const condLines = doc.splitTextToSize(currentReaction.conditions, 170);
+            doc.text(condLines, 20, yPos);
+
+            // Footer
+            doc.setFontSize(9);
+            doc.setTextColor(128, 128, 128);
+            doc.text('Generated by Radiance Chemical Reaction Generator', 105, 280, { align: 'center' });
+            doc.text(`Date: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
+
+            // Save
+            doc.save('radiance-chemical-reaction.pdf');
+        }
+    </script>
+</body>
+</html>
